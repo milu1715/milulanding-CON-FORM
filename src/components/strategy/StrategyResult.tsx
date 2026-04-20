@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { Sparkles, ChevronRight, Save } from "lucide-react";
-import type { GeneratedStrategy, StrategyGoal, RecommendedAction } from "@/types/strategy";
+import type { GeneratedStrategy, StrategyGoal } from "@/types/strategy";
 import { ActionItem } from "./ActionItem";
+import { streamStrategy, parseStrategyJson } from "@/lib/api-client";
 
 interface Props {
   reportId: string;
@@ -26,11 +26,9 @@ export function StrategyResult({
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const cancelRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
     setIsStreaming(true);
     setStreamText("");
     setStrategy(null);
@@ -39,73 +37,30 @@ export function StrategyResult({
 
     let accumulated = "";
 
-    fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reportSummary, goal, customGoalText, decisionHistory: decisions.slice(0, 5), targetMetrics }),
-      signal: ctrl.signal,
-    }).then(async (res) => {
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({ error: res.statusText }));
-        setError(e.error ?? "Errore nella generazione della strategia");
+    const cancel = streamStrategy(
+      { reportSummary, goal, customGoalText, decisionHistory: decisions.slice(0, 5), targetMetrics },
+      (chunk) => {
+        accumulated += chunk;
+        setStreamText(accumulated);
+      },
+      (fullText) => {
         setIsStreaming(false);
-        return;
-      }
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6);
-          if (data === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.text) {
-              accumulated += parsed.text;
-              setStreamText(accumulated);
-            }
-            if (parsed.error) {
-              setError(parsed.error);
-            }
-          } catch {}
+        try {
+          const finalStrategy = parseStrategyJson(fullText, reportId, goal, customGoalText);
+          setStrategy(finalStrategy);
+          onSave(finalStrategy);
+        } catch {
+          setError("Impossibile interpretare la risposta dell'IA. Riprova.");
         }
-      }
-
-      // Parse final JSON
-      try {
-        const jsonMatch = accumulated.match(/\{[\s\S]*\}/);
-        const raw = JSON.parse(jsonMatch?.[0] ?? accumulated);
-        const finalStrategy: GeneratedStrategy = {
-          id: uuidv4(),
-          createdAt: new Date().toISOString(),
-          reportId,
-          goal,
-          customGoalText,
-          summary: raw.summary ?? "",
-          actions: (raw.actions ?? []).map((a: RecommendedAction, i: number) => ({ ...a, id: a.id ?? `action_${i}` })),
-          nextMove: raw.nextMove ?? "",
-          aiRawResponse: accumulated,
-          targetMetrics: raw.targetMetrics,
-        };
-        setStrategy(finalStrategy);
-        onSave(finalStrategy);
-      } catch {
-        setError("Impossibile interpretare la risposta dell'IA. Riprova.");
-      }
-      setIsStreaming(false);
-    }).catch((err) => {
-      if (err.name !== "AbortError") {
-        setError(String(err));
+      },
+      (err) => {
         setIsStreaming(false);
+        setError(err);
       }
-    });
+    );
 
-    return () => ctrl.abort();
+    cancelRef.current = cancel;
+    return () => cancel();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -9,6 +9,7 @@ import { AddDecisionModal } from "@/components/decisions/AddDecisionModal";
 import { OutcomeEvaluator } from "@/components/decisions/OutcomeEvaluator";
 import type { DecisionEntry } from "@/types/decisions";
 import { buildReportSummary } from "@/lib/ai/summarize";
+import { fetchNextMove } from "@/lib/api-client";
 
 interface NextMoveResult {
   nextMove: string;
@@ -29,19 +30,14 @@ export default function DecisionsPage() {
 
   const filtered = filter === "all" ? decisions : decisions.filter((d) => d.status === filter);
 
-  const fetchNextMove = async () => {
+  const loadNextMove = async () => {
     if (!latestReport) return;
     setLoadingNextMove(true);
     try {
-      const res = await fetch("/api/next-move", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reportSummary: buildReportSummary(latestReport),
-          decisionHistory: decisions.slice(0, 8),
-        }),
+      const data = await fetchNextMove({
+        reportSummary: buildReportSummary(latestReport),
+        decisionHistory: decisions.slice(0, 8),
       });
-      const data = await res.json();
       setNextMove(data);
     } catch (err) {
       console.error(err);
@@ -63,7 +59,7 @@ export default function DecisionsPage() {
         </button>
         {latestReport && (
           <button
-            onClick={fetchNextMove}
+            onClick={loadNextMove}
             disabled={loadingNextMove}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)] transition-colors disabled:opacity-50"
           >

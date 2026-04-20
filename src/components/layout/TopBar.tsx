@@ -7,6 +7,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/upload": { title: "Carica Report", subtitle: "Importa CSV da Amazon Ads o Helium 10" },
   "/strategy": { title: "Strategia IA", subtitle: "Genera strategie ottimizzate con Claude AI" },
   "/decisions": { title: "Decision Log", subtitle: "Storico decisioni e prossima mossa consigliata" },
+  "/settings": { title: "Impostazioni", subtitle: "Chiave API e configurazione app" },
 };
 
 export function TopBar() {

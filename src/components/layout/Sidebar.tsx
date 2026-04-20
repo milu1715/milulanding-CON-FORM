@@ -8,6 +8,7 @@ import {
   Sparkles,
   GitBranch,
   TrendingUp,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/upload", label: "Carica Report", icon: Upload },
   { href: "/strategy", label: "Strategia IA", icon: Sparkles },
   { href: "/decisions", label: "Decision Log", icon: GitBranch },
+  { href: "/settings", label: "Impostazioni", icon: Settings },
 ];
 
 export function Sidebar() {
