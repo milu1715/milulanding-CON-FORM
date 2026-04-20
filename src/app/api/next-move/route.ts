@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const prompt = buildNextMovePrompt({ reportSummary, decisionHistory: decisionHistory ?? [] });
 
   const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-opus-4-7",
     max_tokens: 512,
     messages: [{ role: "user", content: prompt }],
   });

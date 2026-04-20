@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const prompt = buildStrategyPrompt({ reportSummary, goal, customGoalText, decisionHistory, targetMetrics });
 
   const stream = await client.messages.stream({
-    model: "claude-sonnet-4-6",
+    model: "claude-opus-4-7",
     max_tokens: 4096,
     messages: [{ role: "user", content: prompt }],
   });
