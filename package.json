@@ -70,7 +70,11 @@
       "package.json"
     ],
     "win": {
-      "target": [{ "target": "dir", "arch": ["x64"] }]
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "dir",  "arch": ["x64"] }
+      ],
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -78,7 +82,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MiLù Ads Console",
-      "license": null
+      "license": null,
+      "installerLanguages": ["it-IT"],
+      "language": "1040"
     },
     "mac": {
       "target": "dmg",
