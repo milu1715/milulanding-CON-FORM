@@ -1,9 +1,23 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const serve = require("electron-serve");
-const Store = require("electron-store");
 
-const store = new Store({ name: "milu-ads-config" });
+// Simple JSON config store (replaces electron-store to avoid ESM issues)
+function getConfigPath() {
+  return path.join(app.getPath("userData"), "milu-ads-config.json");
+}
+function readConfig() {
+  try { return JSON.parse(fs.readFileSync(getConfigPath(), "utf8")); } catch { return {}; }
+}
+function writeConfig(data) {
+  fs.writeFileSync(getConfigPath(), JSON.stringify(data, null, 2), "utf8");
+}
+const store = {
+  get: (key, def) => { const d = readConfig(); return key in d ? d[key] : def; },
+  set: (key, val) => { const d = readConfig(); d[key] = val; writeConfig(d); },
+  delete: (key) => { const d = readConfig(); delete d[key]; writeConfig(d); },
+};
 const isDev = process.env.NODE_ENV === "development";
 
 const loadURL = serve({ directory: path.join(__dirname, "../out") });

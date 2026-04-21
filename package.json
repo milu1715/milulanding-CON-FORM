@@ -16,8 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
-    "electron-serve": "^3.0.1",
-    "electron-store": "^11.0.2"
+    "electron-serve": "^3.0.1"
   },
   "devDependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
