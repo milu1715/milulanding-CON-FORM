@@ -2,6 +2,8 @@
   "name": "milu-ads-console",
   "version": "1.0.0",
   "private": true,
+  "description": "Console AI per la gestione delle campagne Amazon Ads di MiLù Home",
+  "author": "MiLù Home",
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
@@ -10,10 +12,14 @@
     "lint": "eslint",
     "electron:dev": "concurrently \"next dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
     "electron:build": "cross-env ELECTRON_BUILD=1 next build && node scripts/prepare-electron.js && electron-builder --win --publish never",
-    "electron:build:mac": "cross-env ELECTRON_BUILD=1 next build && electron-builder --mac --publish never"
+    "electron:build:mac": "cross-env ELECTRON_BUILD=1 next build && node scripts/prepare-electron.js && electron-builder --mac --publish never"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
+    "electron-serve": "^3.0.1",
+    "electron-store": "^11.0.2"
+  },
+  "devDependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-progress": "^1.1.8",
@@ -21,11 +27,21 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "date-fns": "^4.1.0",
-    "electron-serve": "^3.0.1",
-    "electron-store": "^11.0.2",
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
     "idb": "^8.0.3",
     "lucide-react": "^1.8.0",
     "next": "16.2.4",
@@ -35,23 +51,9 @@
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0",
-    "uuid": "^14.0.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/papaparse": "^5.5.2",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/uuid": "^10.0.0",
-    "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0",
-    "electron": "^41.2.1",
-    "electron-builder": "^26.8.1",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "uuid": "^14.0.0",
     "wait-on": "^9.0.5"
   },
   "build": {
@@ -65,15 +67,10 @@
       "electron/**",
       "out/**",
       "src/lib/ai/prompts.js",
-      "node_modules/@anthropic-ai/sdk/**",
-      "node_modules/electron-store/**",
-      "node_modules/electron-serve/**",
       "package.json"
     ],
-    "extraResources": [],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
-      "icon": "build/icon.ico"
+      "target": [{ "target": "dir", "arch": ["x64"] }]
     },
     "nsis": {
       "oneClick": false,
@@ -81,14 +78,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MiLù Ads Console",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeader": "build/installerHeader.bmp",
       "license": null
     },
     "mac": {
       "target": "dmg",
-      "icon": "build/icon.icns",
+      "icon": "build/icon.png",
       "category": "public.app-category.business"
     }
   }
