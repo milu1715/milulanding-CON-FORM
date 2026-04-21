@@ -1,9 +1,14 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, protocol, net } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const serve = require("electron-serve");
+const url = require("url");
 
-// Simple JSON config store (replaces electron-store to avoid ESM issues)
+// ─── Register app:// protocol before app is ready ───────────────────────────
+protocol.registerSchemesAsPrivileged([
+  { scheme: "app", privileges: { secure: true, standard: true, supportFetchAPI: true } },
+]);
+
+// ─── Simple JSON config store (no electron-store dependency) ─────────────────
 function getConfigPath() {
   return path.join(app.getPath("userData"), "milu-ads-config.json");
 }
@@ -18,9 +23,28 @@ const store = {
   set: (key, val) => { const d = readConfig(); d[key] = val; writeConfig(d); },
   delete: (key) => { const d = readConfig(); delete d[key]; writeConfig(d); },
 };
-const isDev = process.env.NODE_ENV === "development";
 
-const loadURL = serve({ directory: path.join(__dirname, "../out") });
+const isDev = process.env.NODE_ENV === "development";
+const outDir = path.join(__dirname, "../out");
+
+// MIME types for static file serving
+const MIME = {
+  ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
+  ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml",
+  ".ico": "image/x-icon", ".woff": "font/woff", ".woff2": "font/woff2",
+  ".ttf": "font/ttf", ".txt": "text/plain", ".pak": "application/octet-stream",
+};
+
+function serveStaticFile(filePath) {
+  try {
+    const data = fs.readFileSync(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    return new Response(data, { headers: { "content-type": MIME[ext] || "application/octet-stream" } });
+  } catch {
+    return new Response("Not Found", { status: 404 });
+  }
+}
 
 let mainWindow = null;
 
@@ -45,13 +69,36 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools();
   } else {
-    loadURL(mainWindow);
+    mainWindow.loadURL("app://./index.html");
   }
 
   mainWindow.on("closed", () => { mainWindow = null; });
 }
 
 app.whenReady().then(() => {
+  // Serve Next.js static output via app:// protocol
+  protocol.handle("app", (request) => {
+    let pathname = new URL(request.url).pathname;
+    if (pathname === "/") pathname = "/index.html";
+
+    // Try exact path
+    let filePath = path.join(outDir, pathname);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      return serveStaticFile(filePath);
+    }
+    // Try with .html extension (Next.js static export)
+    if (fs.existsSync(filePath + ".html")) {
+      return serveStaticFile(filePath + ".html");
+    }
+    // Try index.html in subdirectory
+    const indexPath = path.join(filePath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      return serveStaticFile(indexPath);
+    }
+    // Fallback to root index.html (SPA routing)
+    return serveStaticFile(path.join(outDir, "index.html"));
+  });
+
   registerIpcHandlers();
   createWindow();
 
@@ -64,19 +111,12 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-// ─── IPC Handlers ───────────────────────────────────────────────────────────
+// ─── IPC Handlers ────────────────────────────────────────────────────────────
 
 function registerIpcHandlers() {
-  // API Key management
   ipcMain.handle("get-api-key", () => store.get("anthropicApiKey", null));
-
-  ipcMain.handle("set-api-key", (_event, key) => {
-    store.set("anthropicApiKey", key);
-  });
-
-  ipcMain.handle("delete-api-key", () => {
-    store.delete("anthropicApiKey");
-  });
+  ipcMain.handle("set-api-key", (_event, key) => { store.set("anthropicApiKey", key); });
+  ipcMain.handle("delete-api-key", () => { store.delete("anthropicApiKey"); });
 
   // Strategy generation with streaming
   ipcMain.handle("analyze", async (event, params) => {

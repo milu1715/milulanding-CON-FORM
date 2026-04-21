@@ -15,8 +15,7 @@
     "electron:build:mac": "cross-env ELECTRON_BUILD=1 next build && node scripts/prepare-electron.js && electron-builder --mac --publish never"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.90.0",
-    "electron-serve": "^3.0.1"
+    "@anthropic-ai/sdk": "^0.90.0"
   },
   "devDependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
